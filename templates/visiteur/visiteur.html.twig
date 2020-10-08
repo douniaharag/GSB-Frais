@@ -3,6 +3,8 @@
 {% block title %}Hello VisiteurController!{% endblock %}
 
 {% block body %}    
+   <h1> MENU </h1> {{app.session.get("nom")}}
+    
     <a  href="{{ path( 'saisir' ) }}">Saisir</a>
     <a  href="{{ path( 'choixMois') }}"> Choisir mois de consultation  </a>    
 {% endblock %}

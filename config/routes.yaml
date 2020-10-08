@@ -19,7 +19,7 @@ menuV:
     
 #Choix du mois
 choixMois:
-    path: /visiteur/ChoixMois
+    path: /visiteur/choixMois
     controller: App\Controller\VisiteurController::choixMois
 
 #Consulter

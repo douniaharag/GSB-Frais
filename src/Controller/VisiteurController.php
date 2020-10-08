@@ -10,8 +10,8 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\ResetType;
-use Symfony\Component\Form\Extension\Core\Type\BirthdayType;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 
 class VisiteurController extends AbstractController
@@ -69,6 +69,83 @@ class VisiteurController extends AbstractController
         }		
         return $this->render( 'visiteur/seConnecterVisiteur.html.twig', array( 'formulaire' => $form->createView() ) ) ;
         
-    }  
+    }
+    public function choixMois(){
+        $request = Request::createFromGlobals() ;
+        
+        $formulaire = $this->createFormBuilder( )
+                ->add('mois', ChoiceType::class, [
+                    'choices' =>[
+                        'Janvier'=>'01',
+                        'Février'=>'02',
+                        'Mars'=>'03',
+                        'Avril'=>'04',
+                        'Mai'=>'05',
+                        'Juin'=>'06',
+                        'Juillet'=>'07',
+                        'Août'=>'08',
+                        'Septembre'=>'09',
+                        'Octobre'=>'10',
+                        'Novembre'=>'11',
+                        'Décembre'=>'12',
+                    ]
+                ])
+                ->add('annee', ChoiceType::class, [
+                    'choices' => [
+                        Date('Y') => Date('Y'),
+                        Date('Y') - 1 => Date('Y') - 1,
+                        Date('Y') - 2 => Date('Y') - 2,
+                        Date('Y') - 3 => Date('Y') - 3,
+                        Date('Y') - 4 => Date('Y') - 4,
+                        Date('Y') - 5 => Date('Y') - 5,
+                        Date('Y') - 6 => Date('Y') - 6,
+                        Date('Y') - 7 => Date('Y') - 7,
+                        Date('Y') - 8 => Date('Y') - 8,
+                        Date('Y') - 9 => Date('Y') - 9,
+                        Date('Y') - 10 => Date('Y') - 10,
+                    ]
+                ])
+                ->add( 'valider' , SubmitType::class )
+                ->add( 'annuler' , ResetType::class )
+                ->getForm();
+        
+        $formulaire->handleRequest($request);
+        
+        if ( $formulaire->isSubmitted() && $formulaire->isValid() ) {
+            $data = $formulaire->getData() ;
+            
+            array( 'data' => $data ) ;
+            $m = $data['mois'];
+            $a = $data['annee'];
+            $s=sprintf("%02d%04d", $m, $a);
+            
+            $pdo = new \PDO('mysql:host=localhost; dbname=gsbFrais', 'developpeur', 'azerty');
+            
+            $rq = $pdo->prepare("select * from FicheFrais where mois = ".$s) ;
+            $rq->execute() ;
+            $resultat1 = $rq->fetch(\PDO::FETCH_ASSOC) ;
+            
+             if ($resultat1 == $s) {
+                        return $this->redirectToRoute( 'visiteur/consulter', array( 'data' => $data ) ) ;
+            }
+        }
 
+    return $this->render( 'visiteur/ChoixMois.html.twig', array( 'formulaire' => $formulaire->createView() ) ) ;              
+    }        
+    
+    public function consulter()
+    {
+        
+         
+        return $this->render('visiteur/consulter.html.twig', [
+            'controller_name' => 'VisiteurController'
+        ]);
+    }
+   
+    public function saisir()
+    {
+        return $this->render('visiteur/saisir.html.twig', [
+            'controller_name' => 'VisiteurController',
+        ]);
+    }
 }
