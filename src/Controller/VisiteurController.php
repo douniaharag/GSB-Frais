@@ -37,6 +37,9 @@ use App\Repository\LignefraisforfaitRepository;
 
 class VisiteurController extends AbstractController
 {
+
+
+/*----------------------------------------------------------------------------------------------------------------------------------*/
     public function seConnecterVisiteur(Request $request)
     {
         $visiteur = new Visiteur();
@@ -51,7 +54,7 @@ class VisiteurController extends AbstractController
             $mdp=$formVisiteur['mdp']->getData();
             $visiteur = $doctrine->getRepository(Visiteur::class)->seConnecterVisiteur($login, $mdp);
             //dump($visiteur);
-            $idVis = $visiteur->getId();
+            
 //-------------------     test de la crétion de la fiche à la connexion 
             if(!empty($visiteur)){
                 $idVis = $visiteur->getId();
@@ -125,60 +128,174 @@ class VisiteurController extends AbstractController
             else{
                 return $this->render('visiteur/seConnecterVisiteur.html.twig', [
                     'formVisiteur'=>$formVisiteur->createView(), 
-                    'erreur' => false,  
+            'accueil' => true,
+            'erreur' => true,  
                 ]);
             }
         }
 
         return $this->render('visiteur/seConnecterVisiteur.html.twig', [
-            'formVisiteur'=>$formVisiteur->createView(),   
+            'formVisiteur'=>$formVisiteur->createView(), 
+            'accueil' => true,
+            'erreur' => false,    
         ]);
     }
 
-    public function saisir(Request $request){
-        $em= $this->getDoctrine()->getManager();
-        $doctrine = $this->getDoctrine();
 
-        $session = $request->getSession();
-        $idVis = $session->get('id');
-        //dump($idVis);
-        if(date("d") > 17 ){
-            $month = date("m");
-            $year = date("Y");
-        }
-        else{
-            if(date("m") == 01){
-                $month = 12;
-                $year = date("Y")-1;
-            }
-            else{
-                $month = date("m")-1;
-                $year = date("Y");
-            }  
-        }
-        $date = sprintf("%02d%04d", $month, $year);
-        //dump($date);
-//------------------------------test pour la saisie
-
-        /*$ficheFrais = $em->getRepository(FicheFrais::class)->getUneFicheFrais($idVis, $date);
-        dump($ficheFrais);
-        $ligneFraisForfait = $em->getRepository(LigneFraisForfait::class)->getFraisForfaitDuMois($idVis, $date);
-        dump($ligneFraisForfait);*/
-        
-        
-//------------------------------
-       
-        return $this->render('saisir/show.html.twig',[
-            'controller_name' => 'VisiteurController'
-        ]);
-    }
-
+/*----------------------------------------------------------------------------------------------------------------------------------*/
+   
     public function seDeconnecter(Request $request){
         $session = $request->getSession();
         $session -> clear();
         return $this->redirect('connexion');
     }
 
+
+/*----------------------------------------------------------------------------------------------------------------------------------*/
+    
+ //Modification de mot de passe
+ public function modifierMdp(Request $request){
+    $session = $request->getSession();
+    $idVis = $session->get('id');
+
+    $em= $this->getDoctrine()->getManager();
+
+    $leVisiteur = $em->getRepository(Visiteur::class)->getVisiteur($idVis);
+    //dump($leVisiteur);
+    //dump($leVisiteur[0]->getMdp());
+
+    //Formulaire
+    $formMdp = $this->createFormBuilder(array('allow_extra_field' => true))
+        ->add('vieuxMdp', PasswordType::class, array(
+            'label' => 'Mot de passe actuel',
+            'attr' => array('class' => 'form-control',)
+        ))
+        ->add('newMdp', PasswordType::class, array(
+            'label' => 'Nouveau mot de passe',
+            'attr' => array('class' => 'form-control',)
+        ))
+        ->add('newMdpBis', PasswordType::class, array(
+            'label' => 'Répétez le nouveau mot de passe',
+            'attr' => array('class' => 'form-control',)
+        ))
+        ->getForm();
+
+    //Creation du formulaire
+    $request = Request::createFromGlobals();
+    $formMdp->handleRequest($request);
+    
+    //Traitement
+    if($formMdp->isSubmitted() && $formMdp->isValid()){
+        //recup data
+        $data = $formMdp->getData();
+        
+        $vieuxMdp = $data['vieuxMdp'];
+        $newMdp = $data['newMdp'];
+        $newMdpBis = $data['newMdpBis'];
+
+        //erreur de saisi du vieux mdp
+        if($vieuxMdp != $leVisiteur[0]->getMdp()){
+            return $this->render('visiteur/gestionMdp.html.twig', [
+                'formMdp' => $formMdp->createView(),
+                'vieuxMdpInvalid' => true,
+                'sucess' => false,
+            'accueil' => false,
+            'newMdpMatchPas' => false,
+            ]);
+        }
+        //erreur entre les 2 new mdp
+        elseif($newMdp != $newMdpBis){
+            return $this->render('visiteur/gestionMdp.html.twig', [
+                'formMdp' => $formMdp->createView(),
+                'vieuxMdpInvalid' => false,
+                'sucess' => false,
+            'accueil' => false,
+            'newMdpMatchPas' => true,
+            ]);
+
+        }
+        //enregistrement si tout va bien
+        else{
+            //modification du mdp
+            $leVisiteur[0]->setMdp($newMdp);
+
+            //MISE A JOUR  BD
+            $em->flush();
+
+            return $this->render('visiteur/gestionMdp.html.twig', [
+                'formMdp' => $formMdp->createView(),
+                'vieuxMdpInvalid' => false,
+                'newMdpMatchPas' => false,
+            'accueil' => false,
+            'sucess' => true,
+            ]);
+        }
+    }
+    else{
+        return $this->render('visiteur/gestionMdp.html.twig', [
+            'formMdp' => $formMdp->createView(),
+            'vieuxMdpInvalid' => false,
+            'sucess' => false,
+            'accueil' => false,
+            'newMdpMatchPas' => false,
+        ]);
+    }
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------*/
+
+//modifications données personnelles
+public function personnelles(Request $request){
+    $session = $request->getSession();
+    $idVis = $session->get('id');
+
+    $em= $this->getDoctrine()->getManager();
+
+    
+    $leVisiteur = $em->getRepository(Visiteur::class)->getVisiteur($idVis);
+    //$adresse= $leVisiteur[0]->getAdresse();
+    //dump($adresse);
+    $formPerso = $this->createFormBuilder()
+        ->add('nom', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getNom() )))
+        ->add('prenom', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getPrenom() )) )
+        ->add('login', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getLogin() )) )
+        ->add('adresse', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getAdresse() )) )
+        ->add('cp', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getCp() )) )
+        ->add('ville', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getVille() )) )
+        ->getForm();
+
+    $request = Request::createFromGlobals();
+    $formPerso->handleRequest($request);
+
+
+    if($formPerso->isSubmitted() && $formPerso->isValid()){
+        //recup données
+        $data = $formPerso->getData();
+        $nom = $data['nom'];
+        $prenom= $data['prenom'];
+        $login= $data['login'];
+        $adresse= $data['adresse'];
+        $cp= $data['cp'];
+        $ville= $data['ville'];
+
+        //modifier le visiteur et enregistrer dans BD
+        $leVisiteur[0]->setAdresse($adresse);
+        $leVisiteur[0]->setCp($cp);
+        $leVisiteur[0]->setVille($ville);
+
+        $em->flush();
+
+        $this->addFlash('success', 'Modifications enregistrées');
+
+        return $this->redirectToRoute('saisir');
+    }
+
+    return $this->render('visiteur/visiteurPerso.html.twig',[
+            'accueil' => false,
+            'formPerso' => $formPerso->createView(),
+    ]);
+}
+
+/*----------------------------------------------------------------------------------------------------------------------------------*/
     //Avant la consultation de la ficheFrais précise
     public function choixMois(Request $request){
         $session= $request->getSession();
@@ -238,14 +355,16 @@ class VisiteurController extends AbstractController
                 return $this->render('visiteur/consulter.html.twig',[
                     'formDate'=>$formDate->createView(), 
                     'fiches' => $tabFichefrais,  
-                    'selection' => false,
+            'accueil' => false,
+            'selection' => false,
                 ]);
             }
             else{
                 return $this->render('visiteur/consulter.html.twig',[
                     'formDate'=>$formDate->createView(),
                     'fiches' => null,  
-                    'selection' => false,
+            'accueil' => false,
+            'selection' => false,
 
                 ]);
             }
@@ -278,7 +397,8 @@ class VisiteurController extends AbstractController
                 return $this->render('visiteur/consulter.html.twig',[
                     'formDate'=>$formDate->createView(), 
                     'fiches' => $tabFichefrais,  
-                    'selection' => false,
+            'accueil' => false,
+            'selection' => false,
 
                 ]);
             }
@@ -287,159 +407,96 @@ class VisiteurController extends AbstractController
                     'formDate'=>$formDate->createView(), 
                     'fiches' => null,  
                     'selection' => false,
+                    'accueil' => false,
 
                 ]);
             }
         }
     }
+
+/*----------------------------------------------------------------------------------------------------------------------------------*/
     //Consultation de la fiche sélectionnée
     public function consulter(Request $request, $date){
-        $session = $request->get('id');
+        $session = $request->getSession();
         dump($session);
         dump($date);
 
-        return $this->render('visiteur/consulter.html.twig');
-    }
-
-    //Modification de mot de passe
-    public function modifierMdp(Request $request){
-        $session = $request->getSession();
         $idVis = $session->get('id');
 
-        $em= $this->getDoctrine()->getManager();
+        //Récupération doctrine
+        $em->$this->getDoctrine()->getManager();
 
-        $leVisiteur = $em->getRepository(Visiteur::class)->getVisiteur($idVis);
-        //dump($leVisiteur);
-        //dump($leVisiteur[0]->getMdp());
+        //Récupération de la fiche de frais
+        $fraisMois = $em->getRepository(FicheFrais::class)->getUneFicheFrais($idVis,$date);
 
-        //Formulaire
-        $formMdp = $this->createFormBuilder(array('allow_extra_field' => true))
-            ->add('vieuxMdp', PasswordType::class, array(
-                'label' => 'Mot de passe actuel',
-                'attr' => array('class' => 'form-control',)
-            ))
-            ->add('newMdp', PasswordType::class, array(
-                'label' => 'Nouveau mot de passe',
-                'attr' => array('class' => 'form-control',)
-            ))
-            ->add('newMdpBis', PasswordType::class, array(
-                'label' => 'Répétez le nouveau mot de passe',
-                'attr' => array('class' => 'form-control',)
-            ))
-            ->getForm();
+        return $this->render('visiteur/consulter.html.twig', [
+            'accueil' => false,
 
-        //Creation du formulaire
-        $request = Request::createFromGlobals();
-        $formMdp->handleRequest($request);
-        
-        //Traitement
-        if($formMdp->isSubmitted() && $formMdp->isValid()){
-            //recup data
-            $data = $formMdp->getData();
-            
-            $vieuxMdp = $data['vieuxMdp'];
-            $newMdp = $data['newMdp'];
-            $newMdpBis = $data['newMdpBis'];
-
-            //erreur de saisi du vieux mdp
-            if($vieuxMdp != $leVisiteur[0]->getMdp()){
-                return $this->render('visiteur/gestionMdp.html.twig', [
-                    'formMdp' => $formMdp->createView(),
-                    'vieuxMdpInvalid' => true,
-                    'sucess' => false,
-                    'newMdpMatchPas' => false,
-                ]);
-            }
-            //erreur entre les 2 new mdp
-            elseif($newMdp != $newMdpBis){
-                return $this->render('visiteur/gestionMdp.html.twig', [
-                    'formMdp' => $formMdp->createView(),
-                    'vieuxMdpInvalid' => false,
-                    'sucess' => false,
-                    'newMdpMatchPas' => true,
-                ]);
-
-            }
-            //enregistrement si tout va bien
-            else{
-                //modification du mdp
-                $leVisiteur[0]->setMdp($newMdp);
-
-                //MAJ BD
-                $em->flush();
-
-                return $this->render('visiteur/gestionMdp.html.twig', [
-                    'formMdp' => $formMdp->createView(),
-                    'vieuxMdpInvalid' => false,
-                    'newMdpMatchPas' => false,
-                    'sucess' => true,
-                ]);
-            }
-        }
-        else{
-            return $this->render('visiteur/gestionMdp.html.twig', [
-                'formMdp' => $formMdp->createView(),
-                'vieuxMdpInvalid' => false,
-                'sucess' => false,
-                'newMdpMatchPas' => false,
-            ]);
-        }
-    }
-
-    //modifications données personnelles
-    public function personnelles(Request $request){
-        $session = $request->getSession();
-        $idVis = $session->get('id');
-
-        $em= $this->getDoctrine()->getManager();
-
-        
-        $leVisiteur = $em->getRepository(Visiteur::class)->getVisiteur($idVis);
-        //$adresse= $leVisiteur[0]->getAdresse();
-        //dump($adresse);
-        $formPerso = $this->createFormBuilder()
-            ->add('nom', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getNom() )))
-            ->add('prenom', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getPrenom() )) )
-            ->add('login', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getLogin() )) )
-            ->add('adresse', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getAdresse() )) )
-            ->add('cp', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getCp() )) )
-            ->add('ville', TextType::class, array('attr' => array('value' => $leVisiteur[0]->getVille() )) )
-            ->getForm();
-
-        $request = Request::createFromGlobals();
-        $formPerso->handleRequest($request);
-
-
-        if($formPerso->isSubmitted() && $formPerso->isValid()){
-            //recup données
-            $data = $formPerso->getData();
-            $nom = $data['nom'];
-            $prenom= $data['prenom'];
-            $login= $data['login'];
-            $adresse= $data['adresse'];
-            $cp= $data['cp'];
-            $ville= $data['ville'];
-
-            //modifier le visiteur et enregistrer dans BD
-            $leVisiteur[0]->setAdresse($adresse);
-            $leVisiteur[0]->setCp($cp);
-            $leVisiteur[0]->setVille($ville);
-
-            $em->flush();
-
-            return $this->redirectToRoute('personnelles');
-        }
-
-        return $this->render('visiteur/visiteurPerso.html.twig',[
-            'formPerso' => $formPerso->createView(),
         ]);
     }
+ 
+/*--------------------------------------------------------------------------------------------------------------------------------------*/
 
+    public function saisir(Request $request){
+        $em= $this->getDoctrine()->getManager();
+        $doctrine = $this->getDoctrine();
 
+        $session = $request->getSession();
+        $idVis = $session->get('id');
+        //dump($idVis);
+        if(date("d") > 17 ){
+            $month = date("m");
+            $year = date("Y");
+        }
+        else{
+            if(date("m") == 01){
+                $month = 12;
+                $year = date("Y")-1;
+            }
+            else{
+                $month = date("m")-1;
+                $year = date("Y");
+            }  
+        }
+        $date = sprintf("%02d%04d", $month, $year);
+        //dump($date);
+        //$ficheFrais = $em->getRepository(FicheFrais::class)->getUneFicheFrais($idVis , $date);
+        $ligneFraisForfait = $em->getRepository(LigneFraisForfait::class)->getFraisForfaitDuMois($idVis , $date) ;
+        dump($ligneFraisForfait);
 
+        
+        
+        $formSaisir =  $this->createFormBuilder() ;
+        foreach ($ligneFraisForfait as $uneLigneFf){
+            $idFForfait = $uneLigneFf->getIdFraisForfait()->getId();
+            $libelle = $uneLigneFf->getIdFraisForfait()->getLibelle();
+            $quantite = $uneLigneFf->getQuantite();
 
+            $formSaisir ->add($mois, TextType::class, array('label'=> $libelle , 'attr' => array(
+                        'class'=> 'form-control'), 'value'  => $quantite,
+            ))
+                        ->getForm();
+        }
+        
 
+    $request =Request::createFromGlobals();
+    $formSaisir->handleRequest($request);
+//------------------------------test pour la saisie
 
+        /*$ficheFrais = $em->getRepository(FicheFrais::class)->getUneFicheFrais($idVis, $date);
+        dump($ficheFrais);
+        $ligneFraisForfait = $em->getRepository(LigneFraisForfait::class)->getFraisForfaitDuMois($idVis, $date);
+        dump($ligneFraisForfait);*/
+        
+        
+//------------------------------
+       
+        return $this->render('saisir/show.html.twig',[
+            'controller_name' => 'VisiteurController',
+            'accueil' => false,
+
+        ]);
+    }
     
 }
  

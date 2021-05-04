@@ -21,10 +21,9 @@ class LignefraisforfaitRepository extends ServiceEntityRepository
     
     public function getFraisForfaitDuMois($idVisiteur, $date)
     {
-        /*$queryBuilder = $this->createQueryBuilder('lff')
+        $queryBuilder = $this->createQueryBuilder('lff')
             //->select('l')
-            //->from(LigneFraisForfait::class, 'lff')
-            ->join('lff.idVisiteur', 'ff', 'WITH', 'ff.idVisiteur'  :idVis)
+            ->from(LigneFraisForfait::class, 'lff')
             ->where('lff.idVisiteur = :idVisiteur')
             ->andWhere('lff.mois = :mois')
             ->setParameter('idVisiteur',$idVisiteur)
@@ -33,14 +32,12 @@ class LignefraisforfaitRepository extends ServiceEntityRepository
             ->getResult();
            
         return $queryBuilder;
-        /*select 
-    -> from LigneFraisForfait lff
-    -> inner join FicheFrais ff
-    -> on lff.idVisiteur = ff.idVisiteur
-    -> and lff.mois=ff.mois
-    -> where lff.mois = "042021";
+        /*select ff.id, ff.libelle, l.quantite from FraisForfait ff INNER JOIN LigneFraisForfait l ON ff.id=l.idFraisForfait WHERE l.idVisiteur = "a17" AND l.mois = "042021" ;
+
 */ 
     }
 
 
 }
+
+

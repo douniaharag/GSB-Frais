@@ -4,8 +4,10 @@
 {% endblock %}
 
 
+
 {% block body %}
-{% include 'visiteur/navbar.html.twig' %}
+{#% include 'visiteur/navbar.html.twig' %#}
+
 <br>
 {# AFFICHAGE DE la rechercher à gauche#}
 <div class="container-fluid">
@@ -73,9 +75,9 @@
 						<tbody>
 							{#BOUCLE POUR FAIRE DEFILER LES RAPPORTS ET LES AFFICHERS#}
 							{% for laFiche in fiches %}
-								<tr class="table-light" id="selection" style="cursor: pointer" onclick="location.href='{{ path( 'consulter') }}">
+								<tr class="table-light" id="selection" style="cursor: pointer" onclick="location.href='{{ path( 'consulter', {'date': laFiche['mois']}) }}">
 									<th scope="row">{{ loop.index }}</th>
-									<td>{{ laFiche['mois'] }}</td>
+									<td>{{ laFiche['mois'] | date('m/Y')}}</td>
 									<td>{{ laFiche['nbjustificatifs'] }}</td>
 									<td>{{ laFiche['montantvalide'] }}</td>
 									<td>{{ laFiche['datemodif'] | date('d/m/Y') }}</td>
